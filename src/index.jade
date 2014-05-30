@@ -3,11 +3,13 @@ html
   head
     meta(charset='utf-8')
     meta(name='viewport', content='width=device-width, initial-scale=1, maximum-scale=1')
-    title When virtualenv is not enough
+    title Intro to Docker
 
     // build:css styles/styles.css
     //- Check out 'src/bower_components/prism/themes/' for available themes
     link(rel='stylesheet', type='text/css', href='bower_components/prism/themes/prism-tomorrow.css')
+    link(rel='stylesheet', type='text/css', href='bower_components/animate.css/animate.min.css')
+
     link(rel='stylesheet', type='text/css', href='styles/main.css')
     // endbuild
 
@@ -16,7 +18,7 @@ html
     article
 
       section.title
-        h1 When <code>virtualenv</code><br>is not enough
+        h1 Intro to Docker
 
       section
         h2 Hi, I'm Steve
@@ -24,7 +26,7 @@ html
           li
             | Web Engineer @&nbsp;
             a(href='https://www.insynchq.com') Insync
-          li Pythonista since 2010
+          li Python, Javascript and Go
           li: a(href='https://twitter.com/themarksteve') twitter.com/themarksteve
           li: a(href='https://github.com/marksteve') github.com/marksteve
 
@@ -49,7 +51,7 @@ html
             h2 System Virtual Machines
             ul
               li Emulates hardware and OS
-              li Eats lot of storage space
+              li Eats lots of storage space
               li Heavy on resources
           .col
             img(src='images/versus.png', width=80)
@@ -59,7 +61,6 @@ html
               li Isolates your app but shares the same resource and OS with the host
               li Lightweight
               li Portable
-              li Works inside System Virtual Machines
               li Social!
 
       section.components
@@ -71,6 +72,11 @@ html
         p.bullet Primary user interface to Docker sending<br>commands through sockets or the RESTful API
         h4.bullet Index (<code>http://index.docker.io/</code>)
         p.bullet Global archive and directory for<br>user supplied Docker images
+
+      section.docker-index
+        p
+          img(src='images/docker-index.png', width=600)
+        p Docker Index
 
       section.elements
         h2 Docker Elements
@@ -182,9 +188,6 @@ html
         h2 Volumes
         pre
           code.language-bash.
-            $ docker run -v /var/app --name app-settings \
-            ubuntu true
-
             $ cat &gt;Dockerfile &lt;&lt;EOF
             FROM marksteve/python
             ADD update-settings.py /src/update-settings.py
@@ -193,6 +196,13 @@ html
             EOF
 
             $ docker build --rm -t update-settings .
+
+      section
+        h2 Volumes
+        pre
+          code.language-bash.
+            $ docker run -v /var/app --name app-settings \
+            ubuntu true
 
       section
         h2 Volumes
@@ -258,6 +268,11 @@ html
         pre
           code.language-bash.
             $ docker run -d --name app-redis marksteve/redis
+
+      section
+        h2 Linking Containers
+        pre
+          code.language-bash.
             $ docker run --rm -t -i --link app-redis:redis \
             flask-with-redisconfig env
             ...
@@ -322,23 +337,18 @@ html
               li: a(href='https://github.com/drone/drone') Drone (CI)
 
       section
-        h2.bullet I use Docker to&hellip;
+        h2.bullet I personally<br>use Docker to&hellip;
         ul
           li Create dev environments
           li Try out libraries with complicated build instructions
-          li Run apps in my personal server
-          li Package my personal projects
+          li Deploy experiments
 
       section
-        h2 So have I convinced<br>you to use Docker?
+        h2 Questions?
         h3 Thank you for listening
-        p.
-          I should be looking awkward right<br>
-          now, waiting for your questions
-        br
         p.ps
           small.
-            P.S. I don't own any of the images used in this<br>
+            I don't own any of the images used in this<br>
             presentation except for the title slide background
 
 
