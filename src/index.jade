@@ -99,7 +99,7 @@ html
         h2 Hello World
         pre
           code.language-bash.
-            $ docker ps -a
+            $ docker ps -l
             CONTAINER ID  IMAGE         COMMAND            ...
             aa3264ba7371  ubuntu:12.04  echo Hello, world  ...
 
@@ -185,6 +185,7 @@ html
         pre
           code.language-bash.
             $ docker run \
+              -ti \
               --rm \
               --volumes-from volume-example \
               ubuntu /bin/bash -il
