@@ -65,28 +65,27 @@ html
 
       section.components
         h2 Docker Components
-        h3.bullet Daemon, Client and the Index
+        h3.bullet Daemon, Client and the Registry
         h4.bullet Daemon (<code>docker -d</code>)
         p.bullet Receives and processes commands<br>to manage lifecycle of containers
         h4.bullet Client (<code>docker &lt;command&gt;</code>)
         p.bullet Primary user interface to Docker sending<br>commands through sockets or the RESTful API
-        h4.bullet Index (<code>http://index.docker.io/</code>)
+        h4.bullet Registry (<code>https://registry.hub.docker.com</code>)
         p.bullet Global archive and directory for<br>user supplied Docker images
 
-      section.docker-index
+      section.docker-registry
         p
-          img(src='images/docker-index.png', width=600)
-        p Docker Index
+          img(src='images/registry.png', width=600)
 
       section.elements
         h2 Docker Elements
-        h3.bullet Containers, Images and the Dockerfile
-        h4.bullet Containers (<code>docker ps</code>)
-        p.bullet Isolated environments that runs your apps
-        h4.bullet Images (<code>docker images</code>)
-        p.bullet Templates containers are built from
+        h3.bullet The Dockerfile, Images and Containers
         h4.bullet Dockerfile
         p.bullet Blueprint for building images
+        h4.bullet Images (<code>docker images</code>)
+        p.bullet Templates containers are built from
+        h4.bullet Containers (<code>docker ps</code>)
+        p.bullet Isolated environments that runs your apps
 
       section
         h2 Hello World
@@ -109,27 +108,22 @@ html
         pre
           code.language-bash.
             $ cat &gt;Dockerfile &lt;&lt;EOF
-            FROM marksteve/python
-            RUN pip install requests
+            FROM ubuntu
+            RUN apt-get update
+            RUN apt-get -y install software-properties-common
+            RUN apt-add-repository -y ppa:rquillo/ansible
+            RUN apt-get update
+            RUN apt-get -y install ansible
             EOF
-            $ docker build --rm -t python-requests .
-            ...
-            $ docker run --rm -t -i python-requests /bin/bash -il
-            # Inside docker container
-            $ python
-            Python 2.7.6 (default, Mar 22 2014, 22:59:56)
-            [GCC 4.8.2] on linux2
-            Type "help", "copyright", "credits" or "license" for more
-            information.
-            &gt;&gt;&gt; import requests
+            $ docker build --rm -t marksteve/ansible .
 
       section
         h2 Build Images
         pre
           code.language-bash.
             $ docker images
-            REPOSITORY       TAG     IMAGE ID      ...
-            python-requests  latest  1a1709cd171b  ...
+            REPOSITORY         TAG     IMAGE ID      CREATED         VIRTUAL SIZE
+            marksteve/ansible  latest  7eaee1b6665f  16 minutes ago  368.2 MB
 
       section
         h2 Exposing Ports
@@ -166,56 +160,38 @@ html
       section
         h2 Volumes
         pre
-          code.language-python.
-            # update-settings.py
-
-            import json
-            import sys
-
-            SETTINGS_FILE = "/var/app/settings.json"
-
-            if __name__ == "__main__":
-              try:
-                with open(SETTINGS_FILE) as f:
-                  settings = json.load(f)
-              except:
-                settings = dict()
-              settings[sys.argv[1]] = sys.argv[2]
-              with open(SETTINGS_FILE, "w") as f:
-                f.write(json.dumps(settings))
-
-      section
-        h2 Volumes
-        pre
           code.language-bash.
             $ cat &gt;Dockerfile &lt;&lt;EOF
-            FROM marksteve/python
-            ADD update-settings.py /src/update-settings.py
-            WORKDIR /src
-            ENTRYPOINT ["python", "update-settings.py"]
+            FROM ubuntu
+            RUN mkdir /volume
+            RUN touch /volume/shared.log
+            VOLUME ["/volume"]
+            CMD ["tail", "-f", "/volume/shared.log"]
             EOF
-
-            $ docker build --rm -t update-settings .
-
-      section
-        h2 Volumes
-        pre
-          code.language-bash.
-            $ docker run -v /var/app --name app-settings \
-            ubuntu true
+            $ docker build --rm -t volume-example .
 
       section
         h2 Volumes
         pre
           code.language-bash.
-            $ docker run --rm --volumes-from app-settings \
-            update-settings cheats on
+            $ docker run \
+              -ti \
+              --rm \
+              --name volume-example \
+              volume-example
 
-            $ docker run --rm --volumes-from app-settings \
-            update-settings gold 16000
+      section
+        h2 Volumes
+        pre
+          code.language-bash.
+            $ docker run \
+              --rm \
+              --volumes-from volume-example \
+              ubuntu /bin/bash -il
 
-            $ docker run --rm --volumes-from app-settings ubuntu \
-            cat /var/app/settings.json
+            # Inside container
+            $ echo "The cake is a lie" &gt;&gt; /volume/shared.log
+
 
       section
         h2 Host Mounts
@@ -226,94 +202,17 @@ html
       section
         h2 Linking Containers
         pre
-          code.language-python.
-            # app.py
-
-            from flask import Flask, jsonify, request
-            from flask_redisconfig import RedisConfig
-
-            app = Flask(__name__)
-            config = RedisConfig("app:config")
-            config.init_app(app)
-
-      section
-        h2 Linking Containers
-        pre
-          code.language-python.
-            # app.py
-
-            @app.route("/config/&lt;name&gt;")
-            def get_config(name):
-              res = dict()
-              res[name] = app.config.get(name)
-              return jsonify(**res)
-
-            if __name__ == "__main__":
-              app.run(host="0.0.0.0")
-
-      section
-        h2 Linking Containers
-        pre
           code.language-bash.
-            $ cat &gt;Dockerfile &lt;&lt;EOF
-            FROM marksteve/python
-            RUN pip install Flask Flask-RedisConfig
-            ADD app.py /src/app.py
-            CMD python /src/app.py
-            EOF
-            $ docker build --rm -t flask-with-redisconfig .
+            $ docker run -d --name redis redis
+            $ docker run \
+              -ti \
+              --rm \
+              --link redis:redis \
+              redis /bin/bash -il
 
-      section
-        h2 Linking Containers
-        pre
-          code.language-bash.
-            $ docker run -d --name app-redis marksteve/redis
-
-      section
-        h2 Linking Containers
-        pre
-          code.language-bash.
-            $ docker run --rm -t -i --link app-redis:redis \
-            flask-with-redisconfig env
-            ...
-            REDIS_PORT=tcp://172.17.0.9:6379
-            REDIS_PORT_6379_TCP=tcp://172.17.0.9:6379
-            REDIS_PORT_6379_TCP_ADDR=172.17.0.9
-            REDIS_PORT_6379_TCP_PORT=6379
-            REDIS_PORT_6379_TCP_PROTO=tcp
-            REDIS_NAME=/cocky_nobel/redis
-            ...
-
-      section
-        h2 Linking Containers
-        pre
-          code.language-python.
-            import os
-            host = os.environ.get("REDIS_PORT_6379_TCP_ADDR")
-            config = RedisConfig("app.config", host=host)
-
-      section
-        h2 Linking Containers
-        pre
-          code.language-bash.
-            $ docker build --rm -t flask-with-redisconfig .
-            $ docker run --rm -t -i --link app-redis:redis \
-            flask-with-redisconfig /bin/bash -il
-            # Inside docker container
-            $ cd src
-            $ python
-            &gt;&gt;&gt; from app import config
-            &gt;&gt;&gt; config.cli()
-            Flask-RedisConfig
-            &gt; set_bool DEBUG 1
-            &gt; set SECRET_KEY theresnoplacelikecowlevel
-
-      section
-        h2 Linking Containers
-        pre
-          code.language-bash.
-            $ docker run --rm -t -i -p 5000:5000 \
-            --link app-redis:redis flask-with-redisconfig
+            # Inside container
+            $ env
+            $ redis-cli -h $REDIS_PORT_6379_TCP_ADDR
 
       section.tools
         h2 Tools
@@ -321,9 +220,11 @@ html
           .col
             h3 Orchestration
             ul
-              li: a(href='http://orchardup.github.io/fig/') Fig
-              li: a(href='https://github.com/toscanini/maestro') Maestro
-              li: a(href='https://github.com/mailgun/shipper') Shipper
+              li: a(href='http://orchardup.github.io/fig/') Fig - Orchard
+              li: a(href='https://github.com/mailgun/shipper') Shipper - Mailgun
+              li: a(href='https://github.com/newrelic/centurion') Centurion - New Relic
+              li: a(href='https://github.com/spotify/helios') Helios - Spotify
+              li: a(href='https://github.com/GoogleCloudPlatform/kubernetes') Kubernetes - Google
           .col
             h3 Web Interface
             ul
@@ -335,13 +236,6 @@ html
               li: a(href='https://github.com/progrium/dokku') Dokku (PaaS)
               li: a(href='https://github.com/deis/deis') Deis (PaaS)
               li: a(href='https://github.com/drone/drone') Drone (CI)
-
-      section
-        h2.bullet I personally<br>use Docker to&hellip;
-        ul
-          li Create dev environments
-          li Try out libraries with complicated build instructions
-          li Deploy experiments
 
       section
         h2 Questions?
