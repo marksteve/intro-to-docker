@@ -338,11 +338,12 @@ code {
 .bespoke-slide.components {
   background-image: url("../images/components.jpg");
 }
-.bespoke-slide.docker-index {
+.bespoke-slide.docker-registry {
   background-image: url("../images/ocean.jpg");
-  color: #fff;
-  font-size: 24px;
-  text-shadow: 0 0 5px rgba(0,0,0,0.2);
+}
+.bespoke-slide.docker-registry img {
+  -webkit-box-shadow: 0 0 5px rgba(0,0,0,0.2);
+  box-shadow: 0 0 5px rgba(0,0,0,0.2);
 }
 .bespoke-slide.elements {
   background-image: url("../images/elements.jpg");

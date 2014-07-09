@@ -56,27 +56,26 @@
       </section>
       <section class="components">
         <h2>Docker Components</h2>
-        <h3 class="bullet">Daemon, Client and the Index</h3>
+        <h3 class="bullet">Daemon, Client and the Registry</h3>
         <h4 class="bullet">Daemon (<code>docker -d</code>)</h4>
         <p class="bullet">Receives and processes commands<br>to manage lifecycle of containers</p>
         <h4 class="bullet">Client (<code>docker &lt;command&gt;</code>)</h4>
         <p class="bullet">Primary user interface to Docker sending<br>commands through sockets or the RESTful API</p>
-        <h4 class="bullet">Index (<code>http://index.docker.io/</code>)</h4>
+        <h4 class="bullet">Registry (<code>https://registry.hub.docker.com</code>)</h4>
         <p class="bullet">Global archive and directory for<br>user supplied Docker images</p>
       </section>
-      <section class="docker-index">
-        <p><img src="images/docker-index.png" width="600"></p>
-        <p>Docker Index</p>
+      <section class="docker-registry">
+        <p><img src="images/registry.png" width="600"></p>
       </section>
       <section class="elements">
         <h2>Docker Elements</h2>
-        <h3 class="bullet">Containers, Images and the Dockerfile</h3>
-        <h4 class="bullet">Containers (<code>docker ps</code>)</h4>
-        <p class="bullet">Isolated environments that runs your apps</p>
-        <h4 class="bullet">Images (<code>docker images</code>)</h4>
-        <p class="bullet">Templates containers are built from</p>
+        <h3 class="bullet">The Dockerfile, Images and Containers</h3>
         <h4 class="bullet">Dockerfile</h4>
         <p class="bullet">Blueprint for building images</p>
+        <h4 class="bullet">Images (<code>docker images</code>)</h4>
+        <p class="bullet">Templates containers are built from</p>
+        <h4 class="bullet">Containers (<code>docker ps</code>)</h4>
+        <p class="bullet">Isolated environments that runs your apps</p>
       </section>
       <section>
         <h2>Hello World</h2>
@@ -95,26 +94,21 @@ aa3264ba7371  ubuntu:12.04  echo Hello, world  ...
       <section>
         <h2>Building Images</h2>
         <pre><code class="language-bash">$ cat &gt;Dockerfile &lt;&lt;EOF
-FROM marksteve/python
-RUN pip install requests
+FROM ubuntu
+RUN apt-get update
+RUN apt-get -y install software-properties-common
+RUN apt-add-repository -y ppa:rquillo/ansible
+RUN apt-get update
+RUN apt-get -y install ansible
 EOF
-$ docker build --rm -t python-requests .
-...
-$ docker run --rm -t -i python-requests /bin/bash -il
-# Inside docker container
-$ python
-Python 2.7.6 (default, Mar 22 2014, 22:59:56)
-[GCC 4.8.2] on linux2
-Type "help", "copyright", "credits" or "license" for more
-information.
-&gt;&gt;&gt; import requests
+$ docker build --rm -t marksteve/ansible .
 </code></pre>
       </section>
       <section>
         <h2>Build Images</h2>
         <pre><code class="language-bash">$ docker images
-REPOSITORY       TAG     IMAGE ID      ...
-python-requests  latest  1a1709cd171b  ...
+REPOSITORY         TAG     IMAGE ID      CREATED         VIRTUAL SIZE
+marksteve/ansible  latest  7eaee1b6665f  16 minutes ago  368.2 MB
 </code></pre>
       </section>
       <section>
@@ -147,52 +141,35 @@ $ docker build --rm -t flask-hello-world .</code></pre>
       </section>
       <section>
         <h2>Volumes</h2>
-        <pre><code class="language-python"># update-settings.py
-
-import json
-import sys
-
-SETTINGS_FILE = "/var/app/settings.json"
-
-if __name__ == "__main__":
-  try:
-    with open(SETTINGS_FILE) as f:
-      settings = json.load(f)
-  except:
-    settings = dict()
-  settings[sys.argv[1]] = sys.argv[2]
-  with open(SETTINGS_FILE, "w") as f:
-    f.write(json.dumps(settings))
-    </code></pre>
-      </section>
-      <section>
-        <h2>Volumes</h2>
         <pre><code class="language-bash">$ cat &gt;Dockerfile &lt;&lt;EOF
-FROM marksteve/python
-ADD update-settings.py /src/update-settings.py
-WORKDIR /src
-ENTRYPOINT ["python", "update-settings.py"]
+FROM ubuntu
+RUN mkdir /volume
+RUN touch /volume/shared.log
+VOLUME ["/volume"]
+CMD ["tail", "-f", "/volume/shared.log"]
 EOF
-
-$ docker build --rm -t update-settings .
+$ docker build --rm -t volume-example .
 </code></pre>
       </section>
       <section>
         <h2>Volumes</h2>
-        <pre><code class="language-bash">$ docker run -v /var/app --name app-settings \
-ubuntu true
-</code></pre>
+        <pre><code class="language-bash">$ docker run \
+  -ti \
+  --rm \
+  --name volume-example \
+  volume-example
+  </code></pre>
       </section>
       <section>
         <h2>Volumes</h2>
-        <pre><code class="language-bash">$ docker run --rm --volumes-from app-settings \
-update-settings cheats on
+        <pre><code class="language-bash">$ docker run \
+  --rm \
+  --volumes-from volume-example \
+  ubuntu /bin/bash -il
+  
+# Inside container
+$ echo "The cake is a lie" &gt;&gt; /volume/shared.log
 
-$ docker run --rm --volumes-from app-settings \
-update-settings gold 16000
-
-$ docker run --rm --volumes-from app-settings ubuntu \
-cat /var/app/settings.json
 </code></pre>
       </section>
       <section>
@@ -202,86 +179,16 @@ cat /var/app/settings.json
       </section>
       <section>
         <h2>Linking Containers</h2>
-        <pre><code class="language-python"># app.py
-
-from flask import Flask, jsonify, request
-from flask_redisconfig import RedisConfig
-
-app = Flask(__name__)
-config = RedisConfig("app:config")
-config.init_app(app)
-</code></pre>
-      </section>
-      <section>
-        <h2>Linking Containers</h2>
-        <pre><code class="language-python"># app.py
-
-@app.route("/config/&lt;name&gt;")
-def get_config(name):
-  res = dict()
-  res[name] = app.config.get(name)
-  return jsonify(**res)
+        <pre><code class="language-bash">$ docker run -d --name redis redis
+$ docker run \
+  -ti \
+  --rm \
+  --link redis:redis \
+  redis /bin/bash -il
   
-if __name__ == "__main__":
-  app.run(host="0.0.0.0")
-  </code></pre>
-      </section>
-      <section>
-        <h2>Linking Containers</h2>
-        <pre><code class="language-bash">$ cat &gt;Dockerfile &lt;&lt;EOF
-FROM marksteve/python
-RUN pip install Flask Flask-RedisConfig
-ADD app.py /src/app.py
-CMD python /src/app.py
-EOF
-$ docker build --rm -t flask-with-redisconfig .
-</code></pre>
-      </section>
-      <section>
-        <h2>Linking Containers</h2>
-        <pre><code class="language-bash">$ docker run -d --name app-redis marksteve/redis
-</code></pre>
-      </section>
-      <section>
-        <h2>Linking Containers</h2>
-        <pre><code class="language-bash">$ docker run --rm -t -i --link app-redis:redis \
-flask-with-redisconfig env
-...
-REDIS_PORT=tcp://172.17.0.9:6379
-REDIS_PORT_6379_TCP=tcp://172.17.0.9:6379
-REDIS_PORT_6379_TCP_ADDR=172.17.0.9
-REDIS_PORT_6379_TCP_PORT=6379
-REDIS_PORT_6379_TCP_PROTO=tcp
-REDIS_NAME=/cocky_nobel/redis
-...
-</code></pre>
-      </section>
-      <section>
-        <h2>Linking Containers</h2>
-        <pre><code class="language-python">import os
-host = os.environ.get("REDIS_PORT_6379_TCP_ADDR")
-config = RedisConfig("app.config", host=host)
-</code></pre>
-      </section>
-      <section>
-        <h2>Linking Containers</h2>
-        <pre><code class="language-bash">$ docker build --rm -t flask-with-redisconfig .
-$ docker run --rm -t -i --link app-redis:redis \
-flask-with-redisconfig /bin/bash -il
-# Inside docker container
-$ cd src
-$ python
-&gt;&gt;&gt; from app import config
-&gt;&gt;&gt; config.cli()
-Flask-RedisConfig
-&gt; set_bool DEBUG 1
-&gt; set SECRET_KEY theresnoplacelikecowlevel
-</code></pre>
-      </section>
-      <section>
-        <h2>Linking Containers</h2>
-        <pre><code class="language-bash">$ docker run --rm -t -i -p 5000:5000 \
---link app-redis:redis flask-with-redisconfig
+# Inside container
+$ env
+$ redis-cli -h $REDIS_PORT_6379_TCP_ADDR
 </code></pre>
       </section>
       <section class="tools">
@@ -290,9 +197,11 @@ Flask-RedisConfig
           <div class="col">
             <h3>Orchestration</h3>
             <ul>
-              <li><a href="http://orchardup.github.io/fig/">Fig</a></li>
-              <li><a href="https://github.com/toscanini/maestro">Maestro</a></li>
-              <li><a href="https://github.com/mailgun/shipper">Shipper</a></li>
+              <li><a href="http://orchardup.github.io/fig/">Fig - Orchard</a></li>
+              <li><a href="https://github.com/mailgun/shipper">Shipper - Mailgun</a></li>
+              <li><a href="https://github.com/newrelic/centurion">Centurion - New Relic</a></li>
+              <li><a href="https://github.com/spotify/helios">Helios - Spotify</a></li>
+              <li><a href="https://github.com/GoogleCloudPlatform/kubernetes">Kubernetes - Google</a></li>
             </ul>
           </div>
           <div class="col">
@@ -311,14 +220,6 @@ Flask-RedisConfig
             </ul>
           </div>
         </div>
-      </section>
-      <section>
-        <h2 class="bullet">I personally<br>use Docker to&hellip;</h2>
-        <ul>
-          <li>Create dev environments</li>
-          <li>Try out libraries with complicated build instructions</li>
-          <li>Deploy experiments</li>
-        </ul>
       </section>
       <section>
         <h2>Questions?</h2>
