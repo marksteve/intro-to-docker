@@ -86,7 +86,7 @@ Hello, world
       </section>
       <section>
         <h2>Hello World</h2>
-        <pre><code class="language-bash">$ docker ps -a
+        <pre><code class="language-bash">$ docker ps -l
 CONTAINER ID  IMAGE         COMMAND            ...
 aa3264ba7371  ubuntu:12.04  echo Hello, world  ...
 </code></pre>
@@ -163,6 +163,7 @@ $ docker build --rm -t volume-example .
       <section>
         <h2>Volumes</h2>
         <pre><code class="language-bash">$ docker run \
+  -ti \
   --rm \
   --volumes-from volume-example \
   ubuntu /bin/bash -il
